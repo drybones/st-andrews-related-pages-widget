@@ -6,16 +6,39 @@
  Author: David Bick, follwing a plugin by Sean Barton
  */
 
-add_post_type_support( 'page' );
-
 function sa_related_pages_render_entry($title, $permalink, $post_class) {
 	$return = '<li><a href="' . $permalink . '" class="' . $post_class . '">' . $title . '</a></li>';
 	return $return;
 }
 
-function sa_related_pages_render_list() {
+function sa_related_pages_render_list($related_posts) {
+	$return = false;
+
+	if ($related_posts->have_posts()) {
+		$return .= $template_start;
+		
+		while ($related_posts->have_posts()) {
+			$related_posts->the_post();
+			global $post;
+			$p = $post;
+
+			$post_class = '';			
+			if ($p->ID == $this_page_id) {
+				$post_class = 'sa_related_pages_current_page';
+			}
+			
+			$return .= sa_related_pages_render_entry($p->post_title, get_permalink($p->ID), $post_class);
+		}
+	}
+	return $return;
+}
+
+function sa_related_pages_find_and_render_list() {
 	global $wpdb;
 	global $wp_query;
+	global $post;
+
+	$p = $post;
 	
 	$template_start = '<ul>';
 	$template_end = '</ul>';
@@ -32,43 +55,41 @@ function sa_related_pages_render_list() {
 	if (!$id) {
 		return; //in the event the $id variable is still empty.
 	}
-		
+	
+	// Parent
+
+
+	// Siblings
+	$args = array(
+		'post_type'=>'page'
+		, 'post_status'=>'publish'
+		, 'post_parent'=>$p->post_parent
+		, 'orderby'=>'menu_order'
+		, 'order'=>'ASC'	);
+	$related_posts = new WP_Query($args);
+	$return .= sa_related_pages_render_list($related_posts);
+
+	// Children
 	$args = array(
 		'post_type'=>'page'
 		, 'post_status'=>'publish'
 		, 'post_parent'=>$id
 		, 'orderby'=>'menu_order'
 		, 'order'=>'ASC'	);
-	
-	$child_posts = new WP_Query($args);
-	        
-	if ($child_posts->have_posts()) {
-		$return .= $template_start;
-		
-		while ($child_posts->have_posts()) {
-			$child_posts->the_post();
-			global $post;
-			$p = $post;
+	$related_posts = new WP_Query($args);
+	$return .= sa_related_pages_render_list($related_posts);
 
-			$post_class = '';			
-			if ($p->ID == $this_page_id) {
-				$post_class = 'sa_related_pages_current_page';
-			}
-			
-			$return .= sa_related_pages_render_entry($p->post_title, get_permalink($p->ID), $post_class);
-		}
-		
-		wp_reset_postdata();
-		wp_reset_query();
+	wp_reset_postdata();
+	wp_reset_query();	
 
-		$return .= $template_end;		
+	if($return) {
+		$return = $template_start . $return . $template_end;
 	}
 
 	return $return;
 }
 
 function sa_related_pages_loaded() {
-	//Widget
 	add_action('widgets_init', create_function('', 'return register_widget("sa_related_pages_pages_widget");'));
 }
 
@@ -83,7 +104,7 @@ class sa_related_pages_pages_widget extends WP_Widget {
 	    extract($args);
 	    $title = apply_filters('widget_title', $instance['title']);
 	    $text = apply_filters('widget_text', $instance['text']);
-		$list = sa_related_pages_render_child_list();
+		$list = sa_related_pages_find_and_render_list();
 		
 		if ($list) {
 			echo $before_widget;
