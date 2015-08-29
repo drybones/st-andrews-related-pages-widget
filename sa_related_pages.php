@@ -22,11 +22,13 @@ function sa_related_pages_render_list($related_posts, $post_class = '', $this_pa
 			global $post;
 			$p = $post;
 
-			$return .= sa_related_pages_render_entry(
-				$p->post_title, 
-				get_permalink($p->ID), 
-				($p->ID == $this_page_id) ? 'sa_related_pages_current_page' : $post_class
-			);
+			if($p->ID != $this_page_id) {
+				$return .= sa_related_pages_render_entry(
+					$p->post_title, 
+					get_permalink($p->ID), 
+					$post_class
+				);
+			}
 		}
 	}
 	return $return;
