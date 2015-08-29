@@ -3,7 +3,7 @@
 /*
  Plugin Name: St Andrews Related Pages
  Description: A custom widget for St Andrews website to show related page from the page tree in a sidebar widget.
- Author: David Bick, follwing a plugin by Sean Barton
+ Author: David Bick, following a plugin by Sean Barton
  */
 
 function sa_related_pages_render_entry($title, $permalink, $post_class) {
