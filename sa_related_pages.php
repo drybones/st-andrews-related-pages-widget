@@ -7,11 +7,11 @@
  */
 
 function sa_related_pages_render_entry($title, $permalink, $post_class) {
-	$return = '<li><a href="' . $permalink . '" class="' . $post_class . '">' . $title . '</a></li>';
+	$return = '<li class="' . $post_class . '"><a href="' . $permalink . '">' . $title . '</a></li>';
 	return $return;
 }
 
-function sa_related_pages_render_list($related_posts) {
+function sa_related_pages_render_list($related_posts, $post_class = '', $this_page_id=false) {
 	$return = false;
 
 	if ($related_posts->have_posts()) {
@@ -22,12 +22,11 @@ function sa_related_pages_render_list($related_posts) {
 			global $post;
 			$p = $post;
 
-			$post_class = '';			
-			if ($p->ID == $this_page_id) {
-				$post_class = 'sa_related_pages_current_page';
-			}
-			
-			$return .= sa_related_pages_render_entry($p->post_title, get_permalink($p->ID), $post_class);
+			$return .= sa_related_pages_render_entry(
+				$p->post_title, 
+				get_permalink($p->ID), 
+				($p->ID == $this_page_id) ? 'sa_related_pages_current_page' : $post_class
+			);
 		}
 	}
 	return $return;
@@ -38,49 +37,50 @@ function sa_related_pages_find_and_render_list() {
 	global $wp_query;
 	global $post;
 
-	$p = $post;
+	$post_id = get_the_ID();
+	$parent_id = $post->post_parent;
 	
 	$template_start = '<ul>';
 	$template_end = '</ul>';
 
-	$this_page_id = $wp_query->get_queried_object_id();
-
-	$return = false;
-	$nest_level++;
-
-	if (!$id) {
-		$id = get_the_ID();
-	}
+	$parent_list = $sibling_list = $child_list = false;
 	
-	if (!$id) {
-		return; //in the event the $id variable is still empty.
+	if($parent_id) {
+		// Parent
+		$args = array(
+			'post_type'=>'page'
+			, 'post_status'=>'publish'
+			, 'page_id'=>$parent_id
+		);
+		$related_posts = new WP_Query($args);
+		$parent_list .= sa_related_pages_render_list($related_posts, 'sa_related_pages_parent');
+
+		// Siblings
+		$args = array(
+			'post_type'=>'page'
+			, 'post_status'=>'publish'
+			, 'post_parent'=>$parent_id
+			, 'orderby'=>'menu_order'
+			, 'order'=>'ASC'	);
+		$related_posts = new WP_Query($args);
+		$sibling_list .= sa_related_pages_render_list($related_posts, 'sa_related_pages_sibling', $post_id);
 	}
-	
-	// Parent
-
-
-	// Siblings
-	$args = array(
-		'post_type'=>'page'
-		, 'post_status'=>'publish'
-		, 'post_parent'=>$p->post_parent
-		, 'orderby'=>'menu_order'
-		, 'order'=>'ASC'	);
-	$related_posts = new WP_Query($args);
-	$return .= sa_related_pages_render_list($related_posts);
 
 	// Children
 	$args = array(
 		'post_type'=>'page'
 		, 'post_status'=>'publish'
-		, 'post_parent'=>$id
+		, 'post_parent'=>$post_id
 		, 'orderby'=>'menu_order'
 		, 'order'=>'ASC'	);
 	$related_posts = new WP_Query($args);
-	$return .= sa_related_pages_render_list($related_posts);
+	$child_list .= sa_related_pages_render_list($related_posts, 'sa_related_pages_child');
 
 	wp_reset_postdata();
 	wp_reset_query();	
+
+	// Choose something suitable... children only, if we have them. Otherwise siblings and parent.
+	$return = $child_list ? $child_list : $parent_list . $sibling_list;
 
 	if($return) {
 		$return = $template_start . $return . $template_end;
