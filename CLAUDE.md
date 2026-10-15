@@ -19,10 +19,6 @@ There is no build system, package manager, linter or test suite. To try a change
 - Selection rule: if the page has children, show **only** the children; otherwise show the parent followed by the siblings. Everything is wrapped in a single `<ul>`, with one `<li class="...">` per entry so the theme can style each group.
 - Because the queries loop with `the_post()`, the function calls `wp_reset_postdata()` / `wp_reset_query()` afterwards. Keep these calls if you add queries.
 
-## Legacy code to be aware of
+## PHP compatibility
 
-The plugin uses APIs that newer PHP and WordPress versions have removed:
-- `create_function()` in `sa_related_pages_loaded()` (removed in PHP 8)
-- PHP4-style constructor `sa_related_pages_pages_widget()` that calls `parent::WP_Widget()` (replaced by `__construct` / `parent::__construct`)
-
-Check which versions the target site runs before changing these. Also, `$template_start` in `sa_related_pages_render_list()` is undefined and unused there; the `<ul>` wrapper is added in `sa_related_pages_find_and_render_list()`.
+The live site runs PHP 8.3. Avoid removed APIs such as `create_function()` and PHP4-style constructors. Use `?? ''` when reading widget `$instance` keys, because a newly added widget has no saved settings.
