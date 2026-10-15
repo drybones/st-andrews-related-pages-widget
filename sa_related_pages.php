@@ -12,11 +12,9 @@ function sa_related_pages_render_entry($title, $permalink, $post_class) {
 }
 
 function sa_related_pages_render_list($related_posts, $post_class = '', $this_page_id=false) {
-	$return = false;
+	$return = '';
 
 	if ($related_posts->have_posts()) {
-		$return .= $template_start;
-		
 		while ($related_posts->have_posts()) {
 			$related_posts->the_post();
 			global $post;
@@ -39,13 +37,18 @@ function sa_related_pages_find_and_render_list() {
 	global $wp_query;
 	global $post;
 
+	// Nothing to relate to, e.g. on a 404 page
+	if (!$post) {
+		return '';
+	}
+
 	$post_id = get_the_ID();
 	$parent_id = $post->post_parent;
 	
 	$template_start = '<ul>';
 	$template_end = '</ul>';
 
-	$parent_list = $sibling_list = $child_list = false;
+	$parent_list = $sibling_list = $child_list = '';
 	
 	if($parent_id) {
 		// Parent
@@ -92,20 +95,22 @@ function sa_related_pages_find_and_render_list() {
 }
 
 function sa_related_pages_loaded() {
-	add_action('widgets_init', create_function('', 'return register_widget("sa_related_pages_pages_widget");'));
+	add_action('widgets_init', function() {
+		register_widget('sa_related_pages_pages_widget');
+	});
 }
 
 class sa_related_pages_pages_widget extends WP_Widget {
-    function sa_related_pages_pages_widget() {
-        parent::WP_Widget(false, 'St Andrews Related Pages');	
+    function __construct() {
+        parent::__construct(false, 'St Andrews Related Pages');
     }
 
     function widget($args, $instance) {
 		global $sbu;
 		
 	    extract($args);
-	    $title = apply_filters('widget_title', $instance['title']);
-	    $text = apply_filters('widget_text', $instance['text']);
+	    $title = apply_filters('widget_title', $instance['title'] ?? '');
+	    $text = apply_filters('widget_text', $instance['text'] ?? '');
 		$list = sa_related_pages_find_and_render_list();
 		
 		if ($list) {
@@ -132,8 +137,8 @@ class sa_related_pages_pages_widget extends WP_Widget {
     function form($instance) {
 		global $sbu;
 	
-        $title = esc_attr($instance['title']);
-		$text = trim(esc_attr($instance['text']));
+        $title = esc_attr($instance['title'] ?? '');
+		$text = trim(esc_attr($instance['text'] ?? ''));
 	
         ?>
         <p><label for="<?php echo $this->get_field_id('title'); ?>"><?php _e('Title:'); ?> <input class="widefat" id="<?php echo $this->get_field_id('title'); ?>" name="<?php echo $this->get_field_name('title'); ?>" type="text" value="<?php echo $title; ?>" /></label></p>
